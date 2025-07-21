@@ -90,5 +90,6 @@ String_View sv_from_parts(const char *bytes, usize count) {
     };
     return sv;
 }
-
+//NOTE: do i really need that for include order?
+#undef CDT_IMPL
 #endif
