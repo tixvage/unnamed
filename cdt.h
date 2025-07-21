@@ -18,6 +18,8 @@ typedef uint64_t u64;
 typedef int64_t i64;
 typedef size_t usize;
 typedef ptrdiff_t isize;
+typedef float  f32;
+typedef double f64;
 
 void cdt_error_handler(const char *file, i32 line, const char *pre_msg, const char *msg, ...);
 

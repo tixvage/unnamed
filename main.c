@@ -10,6 +10,9 @@
 #define WINDOW_WIDTH 900
 #define WINDOW_HEIGHT 600
 
+#define RENDER_WIDTH 450.f
+#define RENDER_HEIGHT 300.f
+
 typedef struct Player {
     Entity handle;
     i32 health;
@@ -54,7 +57,6 @@ int main(void) {
     for (usize i = 0; i < id_counter; i++) {
         Entity *handle = entities[i];
         printf("entity[%ld]:%s(%d)\n", handle->id, Entity_Type_Name_Map[handle->type], handle->type);
-        //NOTE(melih): change vim's indentation for switch cases it's weird
         switch (handle->type) {
             case EType_None: {
                 printf("opsi dopsi ogus bogus\n");
@@ -72,15 +74,43 @@ int main(void) {
         destroy(handle);
         entities[i] = NULL;
     }
-
-    todo("game");
-
+    
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "unnamed");
     SetTargetFPS(60);
 
+    //NOTE: this is definitely not the common approach for scaled pixel art games
+    //TODO: make your research for this
+    RenderTexture2D surface = LoadRenderTexture(RENDER_WIDTH, RENDER_HEIGHT);
+
     while (!WindowShouldClose()) {
         BeginDrawing();
+        ClearBackground(BLACK);
+        BeginTextureMode(surface);
+        //                       poop color
         ClearBackground(GetColor(0x251818FF));
+        DrawCircle(225, 150, 20.f, GetColor(0x18186CFF));
+        EndTextureMode();
+        f32 window_width = cast(f32) GetScreenWidth();
+        f32 window_height = cast(f32) GetScreenHeight();
+        f32 scale_factor = min(window_width / RENDER_WIDTH, window_height / RENDER_HEIGHT);
+        Rectangle surface_src_rect = {
+            .x = 0,
+            .y = 0,
+            .width = surface.texture.width,
+            .height = -surface.texture.height,
+        };
+        f32 final_width = surface.texture.width * scale_factor;
+        f32 final_height = surface.texture.height * scale_factor;
+        Rectangle surface_dest_rect = {
+            .x = (window_width - final_width) / 2,
+            .y = (window_height - final_height) / 2,
+            .width = final_width,
+            .height = final_height,
+        };
+
+        DrawTexturePro(surface.texture, surface_src_rect, surface_dest_rect, (Vector2){ 0 }, 0, WHITE);
+
         DrawFPS(0, 0);
         EndDrawing();
     }
