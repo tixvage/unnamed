@@ -50,12 +50,13 @@ typedef struct String_Builder {
 
 } String_Builder;
 
-//TODO: implement string builder fully
+//TODO: implement string view fully
 typedef struct String_View {
     const char *bytes;
     usize count;
 } String_View;
 
+//TODO: add formatter
 #define sv(x) sv_from_parts(x, strlen(x))
 
 String_View sv_from_parts(const char *bytes, usize count);
