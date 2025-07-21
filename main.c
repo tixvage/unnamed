@@ -84,30 +84,38 @@ int main(void) {
     RenderTexture2D surface = LoadRenderTexture(RENDER_WIDTH, RENDER_HEIGHT);
 
     while (!WindowShouldClose()) {
-        BeginDrawing();
-        ClearBackground(BLACK);
-        BeginTextureMode(surface);
-        //                       poop color
-        ClearBackground(GetColor(0x251818FF));
-        DrawCircle(225, 150, 20.f, GetColor(0x18186CFF));
-        EndTextureMode();
         f32 window_width = cast(f32) GetScreenWidth();
         f32 window_height = cast(f32) GetScreenHeight();
         f32 scale_factor = min(window_width / RENDER_WIDTH, window_height / RENDER_HEIGHT);
+        f32 final_width = surface.texture.width * scale_factor;
+        f32 final_height = surface.texture.height * scale_factor;
+        i32 surface_x_offset = (window_width - final_width) / 2;
+        i32 surface_y_offset = (window_height - final_height) / 2;
+
         Rectangle surface_src_rect = {
             .x = 0,
             .y = 0,
             .width = surface.texture.width,
             .height = -surface.texture.height,
         };
-        f32 final_width = surface.texture.width * scale_factor;
-        f32 final_height = surface.texture.height * scale_factor;
         Rectangle surface_dest_rect = {
-            .x = (window_width - final_width) / 2,
-            .y = (window_height - final_height) / 2,
+            .x = surface_x_offset,
+            .y = surface_y_offset,
             .width = final_width,
             .height = final_height,
         };
+
+        //NOTE: how these functions work actaully??
+        SetMouseOffset(-surface_x_offset, -surface_y_offset);
+        SetMouseScale(1/scale_factor, 1/scale_factor);
+
+        BeginDrawing();
+        ClearBackground(BLACK);
+        BeginTextureMode(surface);
+        //                       poop color
+        ClearBackground(GetColor(0x251818FF));
+        DrawCircleV(GetMousePosition(), 20.f, GetColor(0x18186CFF));
+        EndTextureMode();
 
         DrawTexturePro(surface.texture, surface_src_rect, surface_dest_rect, (Vector2){ 0 }, 0, WHITE);
 
