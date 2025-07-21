@@ -58,6 +58,7 @@ typedef struct String_View {
 
 //TODO: add formatter
 #define sv(x) sv_from_parts(x, strlen(x))
+#define sv_arg(x) cast(i32)(x.count), (x.bytes)
 
 String_View sv_from_parts(const char *bytes, usize count);
 

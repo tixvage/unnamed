@@ -98,11 +98,11 @@ int main(void) {
             } break;
             case EType_Player: {
                 Player *p = cast(Player *) handle;
-                printf("my name is %.*s, health: %d\n", cast(i32) p->name.count, p->name.bytes, p->health);
+                printf("my name is %.*s, health: %d\n", sv_arg(p->name), p->health);
             } break;
             case EType_Enemy: {
                 Enemy *e = cast(Enemy *) handle;
-                printf("meine name ist %.*s, damage: %d\n", cast(i32) e->name.count, e->name.bytes, e->damage);
+                printf("meine name ist %.*s, damage: %d\n", sv_arg(e->name), e->damage);
             } break;
             default: {} break;
         }
