@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <raylib.h>
+#include <raymath.h>
 
 #define CDT_IMPL
 #include "cdt.h"
@@ -13,80 +14,106 @@
 #define RENDER_WIDTH 450.f
 #define RENDER_HEIGHT 300.f
 
-typedef struct Player {
-    Entity handle;
-    i32 health;
-    String_View name;
-} Player;
+u32 random() {
+    static u32 state = 123456789;
+    state ^= state << 13;
+    state ^= state >> 17;
+    state ^= state << 5;
+    return state;
+}
 
-typedef struct Enemy {
-    Entity handle;
-    u8 damage;
-    String_View name;
-} Enemy;
+#define MAX_ENTITY 100
+usize id_counter = 0;
+Entity *entities[MAX_ENTITY];
 
-Entity *entities[20];
+//TODO: asset system
+Texture textures[10];
+
+typedef struct Knight {
+    Entity handle;
+    Vector2 next_target;
+    f32 wait_timer;
+    f32 new_wait_time;
+} Knight;
+
+#define KNIGHT_SPEED 200.f
+
+void knight_frame(Entity *_e, f32 dt) {
+    if (!_e || _e->type != EType_Knight) return;
+    Knight *k = cast(Knight *) _e;
+
+    if (Vector2Distance(k->next_target, k->handle.transform.position) < 2.f) {
+        k->wait_timer += dt;
+        if (k->wait_timer >= k->new_wait_time) {
+            k->wait_timer = 0;
+            k->new_wait_time = (random() % 3) + (random() / U32_MAX);
+            k->next_target.x = random() % cast(u32) RENDER_WIDTH;
+            k->next_target.y = random() % cast(u32) RENDER_HEIGHT;
+        }
+    }
+
+    Vector2 diff = Vector2Subtract(k->next_target, k->handle.transform.position);
+    Vector2 direction = Vector2Normalize(diff);
+
+    k->handle.transform.position.x += direction.x * KNIGHT_SPEED * dt;
+    k->handle.transform.position.y += direction.y * KNIGHT_SPEED * dt;
+}
+
+Knight *knight_create(void) {
+    Knight *k = calloc(1, sizeof *k);
+    entities[id_counter] = cast(Entity *) k;
+    k->handle.id = id_counter++;
+
+    k->handle.type = EType_Knight;
+    k->handle.flags = EFlag_Process;
+    k->handle.frame = knight_frame;
+    k->handle.transform.position = (Vector2) {
+        .x = random() % cast(u32) RENDER_WIDTH,
+        .y = random() % cast(u32) RENDER_HEIGHT,
+    };
+
+    k->next_target = k->handle.transform.position;
+    k->new_wait_time = (random() % 2) + 1;
+
+    Sprite sprite = {
+        .texture = 0,
+        .frames[0] = {
+            9, 9,
+            13, 19,
+            0, 0,
+            0,
+        },
+        .frame_count = 1,
+    };
+    k->handle.renderable.sprites[0] = sprite;
+    k->handle.renderable.sprite_count++;
+
+    return k;
+}
 
 int main(void) {
-    usize id_counter = 0;
-
-    {
-        Player *p = create(Player);
-        entities[id_counter] = cast(Entity*) p;
-        p->handle.id = id_counter++;
-        p->handle.type = EType_Player;
-        p->handle.flags = EFlag_Process | EFlag_Renderable;
-        p->health = 69;
-        p->name = sv("Knaye");
-        Enemy *e1 = create(Enemy);
-        entities[id_counter] = cast(Entity *) e1;
-        e1->handle.id = id_counter++;
-        e1->handle.type = EType_Enemy;
-        e1->handle.flags = EFlag_Process | EFlag_Renderable;
-        e1->damage = 42;
-        e1->name = sv("Yzeey");
-        Enemy *e2 = create(Enemy);
-        entities[id_counter] = cast(Entity *) e2;
-        e2->handle.id = id_counter++;
-        e2->handle.type = EType_Enemy;
-        e2->handle.flags = EFlag_Process | EFlag_Renderable;
-        e2->damage = 16;
-        e2->name = sv("Wset");
-    }
-
-    for (usize i = 0; i < id_counter; i++) {
-        Entity *handle = entities[i];
-        printf("entity[%ld]:%s(%d)\n", handle->id, Entity_Type_Name_Map[handle->type], handle->type);
-        switch (handle->type) {
-            case EType_None: {
-                printf("opsi dopsi ogus bogus\n");
-            } break;
-            case EType_Player: {
-                Player *p = cast(Player *) handle;
-                printf("my name is %.*s, health: %d\n", sv_arg(p->name), p->health);
-            } break;
-            case EType_Enemy: {
-                Enemy *e = cast(Enemy *) handle;
-                printf("meine name ist %.*s, damage: %d\n", sv_arg(e->name), e->damage);
-            } break;
-            default: {} break;
-        }
-        destroy(handle);
-        entities[i] = NULL;
-    }
-    
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "unnamed");
-    SetTargetFPS(60);
+    //SetTargetFPS(60);
+
+    textures[0] = LoadTexture("knight.png");
 
     //NOTE: this is definitely not the common approach for scaled pixel art games
     //TODO: make your research for this
     RenderTexture2D surface = LoadRenderTexture(RENDER_WIDTH, RENDER_HEIGHT);
 
+    //TODO: decrease this
+    printf("sizeof(struct Entity): %lu\n", sizeof(Entity));
+
+    for (usize i = 0; i < MAX_ENTITY; i++) {
+        knight_create();
+    }
+
     while (!WindowShouldClose()) {
+        f32 dt = GetFrameTime();
         f32 window_width = cast(f32) GetScreenWidth();
         f32 window_height = cast(f32) GetScreenHeight();
-        f32 scale_factor = min(window_width / RENDER_WIDTH, window_height / RENDER_HEIGHT);
+        f32 scale_factor = /*cast(i32)*/ min(window_width / RENDER_WIDTH, window_height / RENDER_HEIGHT);
         f32 final_width = surface.texture.width * scale_factor;
         f32 final_height = surface.texture.height * scale_factor;
         i32 surface_x_offset = (window_width - final_width) / 2;
@@ -109,12 +136,43 @@ int main(void) {
         SetMouseOffset(-surface_x_offset, -surface_y_offset);
         SetMouseScale(1/scale_factor, 1/scale_factor);
 
+        for (usize i = 0; i < id_counter; i++) {
+            Entity *e = entities[i];
+            if (e->flags & EFlag_Process) e->frame(e, dt);
+        }
+
         BeginDrawing();
         ClearBackground(BLACK);
+
         BeginTextureMode(surface);
         //                       poop color
         ClearBackground(GetColor(0x251818FF));
-        DrawCircleV(GetMousePosition(), 20.f, GetColor(0x18186CFF));
+
+        //TODO: we gonna need layers
+        for (usize i = 0; i < id_counter; i++) {
+            const Entity *entity = entities[i];
+            const Entity_Renderable *renderable = &entity->renderable;
+            for (usize j = 0; j < renderable->sprite_count; j++) {
+                const Sprite *sprite = &renderable->sprites[j];
+                Texture2D texture = textures[sprite->texture];
+                if (sprite->frame_count == 1) {
+                    Sprite_Frame frame = sprite->frames[0];
+                    Rectangle source = {
+                        frame.x, frame.y,
+                        frame.w, frame.h,
+                    };
+                    Rectangle dest = {
+                        entity->transform.position.x + cast(f32) frame.off_x,
+                        entity->transform.position.y + cast(f32) frame.off_y,
+                        frame.w, frame.h,
+                    };
+                    Vector2 origin = { 0 };
+                    DrawTexturePro(texture, source, dest, origin, entity->transform.rotation, WHITE);
+                }
+            }
+        }
+        
+        DrawCircleV(GetMousePosition(), 10.f, ColorAlpha(GetColor(0x18186CFF), 0.5f));
         EndTextureMode();
 
         DrawTexturePro(surface.texture, surface_src_rect, surface_dest_rect, (Vector2){ 0 }, 0, WHITE);
