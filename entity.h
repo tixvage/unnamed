@@ -25,7 +25,7 @@ typedef struct Sprite {
     Sprite_Frame frames[FRAME_PER_SPRITE];
     usize frame_count;
     usize current_frame;
-    bool loop, one_shot;
+    bool loop, flip;
     f32 timer;
 } Sprite;
 

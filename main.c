@@ -26,7 +26,7 @@ u32 random() {
 usize id_counter = 0;
 Entity *entities[MAX_ENTITY];
 
-//TODO: asset system
+//TODO: assetsystem
 Texture textures[10];
 
 typedef struct Knight {
@@ -36,7 +36,7 @@ typedef struct Knight {
     f32 new_wait_time;
 } Knight;
 
-#define KNIGHT_SPEED 200.f
+#define KNIGHT_SPEED 100.f
 
 void knight_frame(Entity *_e, f32 dt) {
     if (!_e || _e->type != EType_Knight) return;
@@ -53,6 +53,7 @@ void knight_frame(Entity *_e, f32 dt) {
     }
 
     Vector2 diff = Vector2Subtract(k->next_target, k->handle.transform.position);
+    k->handle.renderable.sprites[0].flip = diff.x < 0;
     Vector2 direction = Vector2Normalize(diff);
 
     k->handle.transform.position.x += direction.x * KNIGHT_SPEED * dt;
@@ -75,15 +76,59 @@ Knight *knight_create(void) {
     k->next_target = k->handle.transform.position;
     k->new_wait_time = (random() % 2) + 1;
 
+#define ANIMATION_TIME 0.15f
     Sprite sprite = {
         .texture = 0,
         .frames[0] = {
-            9, 9,
-            13, 19,
+            8, 74,
+            14, 18,
             0, 0,
-            0,
+            ANIMATION_TIME,
         },
-        .frame_count = 1,
+        .frames[1] = {
+            41, 74,
+            13, 18,
+            0, 0,
+            ANIMATION_TIME,
+        },
+        .frames[2] = {
+            73, 74,
+            13, 18,
+            0, 0,
+            ANIMATION_TIME,
+        },
+        .frames[3] = {
+            105, 74,
+            13, 18,
+            0, 0,
+            ANIMATION_TIME,
+        },
+        .frames[4] = {
+            136, 74,
+            14, 18,
+            0, 0,
+            ANIMATION_TIME,
+        },
+        .frames[5] = {
+            169, 74,
+            13, 18,
+            0, 0,
+            ANIMATION_TIME,
+        },
+        .frames[6] = {
+            201, 74,
+            13, 18,
+            0, 0,
+            ANIMATION_TIME,
+        },
+        .frames[7] = {
+            233, 74,
+            13, 18,
+            0, 0,
+            ANIMATION_TIME,
+        },
+        .frame_count = 8,
+        .loop = true,
     };
     k->handle.renderable.sprites[0] = sprite;
     k->handle.renderable.sprite_count++;
@@ -113,7 +158,7 @@ int main(void) {
         f32 dt = GetFrameTime();
         f32 window_width = cast(f32) GetScreenWidth();
         f32 window_height = cast(f32) GetScreenHeight();
-        f32 scale_factor = /*cast(i32)*/ min(window_width / RENDER_WIDTH, window_height / RENDER_HEIGHT);
+        f32 scale_factor = min(window_width / RENDER_WIDTH, window_height / RENDER_HEIGHT);
         f32 final_width = surface.texture.width * scale_factor;
         f32 final_height = surface.texture.height * scale_factor;
         i32 surface_x_offset = (window_width - final_width) / 2;
@@ -150,10 +195,10 @@ int main(void) {
 
         //TODO: we gonna need layers
         for (usize i = 0; i < id_counter; i++) {
-            const Entity *entity = entities[i];
-            const Entity_Renderable *renderable = &entity->renderable;
+            Entity *entity = entities[i];
+            Entity_Renderable *renderable = &entity->renderable;
             for (usize j = 0; j < renderable->sprite_count; j++) {
-                const Sprite *sprite = &renderable->sprites[j];
+                Sprite *sprite = &renderable->sprites[j];
                 Texture2D texture = textures[sprite->texture];
                 if (sprite->frame_count == 1) {
                     Sprite_Frame frame = sprite->frames[0];
@@ -161,6 +206,33 @@ int main(void) {
                         frame.x, frame.y,
                         frame.w, frame.h,
                     };
+                    if (sprite->flip) source.width = -source.width;
+                    Rectangle dest = {
+                        entity->transform.position.x + cast(f32) frame.off_x,
+                        entity->transform.position.y + cast(f32) frame.off_y,
+                        frame.w, frame.h,
+                    };
+                    Vector2 origin = { 0 };
+                    DrawTexturePro(texture, source, dest, origin, entity->transform.rotation, WHITE);
+                } else {
+                    sprite->timer += dt;
+                    Sprite_Frame frame = sprite->frames[sprite->current_frame];
+                    if (sprite->timer >= frame.time) {
+                        sprite->timer = 0;
+                        sprite->current_frame++;
+                        if (sprite->current_frame >= sprite->frame_count) {
+                            if (sprite->loop) sprite->current_frame = 0;
+                            else sprite->current_frame--;
+                        }
+                    }
+                    //?
+                    frame = sprite->frames[sprite->current_frame];
+
+                    Rectangle source = {
+                        frame.x, frame.y,
+                        frame.w, frame.h,
+                    };
+                    if (sprite->flip) source.width = -source.width;
                     Rectangle dest = {
                         entity->transform.position.x + cast(f32) frame.off_x,
                         entity->transform.position.y + cast(f32) frame.off_y,
