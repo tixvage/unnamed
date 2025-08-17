@@ -1,3 +1,11 @@
+//TODO:
+//map editor
+//entity editor?
+//animation editor
+//console
+//ideas for game
+//fully implement cdt.h especially string_builder
+
 #include <stdio.h>
 #include <stdint.h>
 #include <raylib.h>
@@ -44,16 +52,19 @@ void knight_frame(Entity *_e, f32 dt) {
 
     if (Vector2Distance(k->next_target, k->handle.transform.position) < 2.f) {
         k->wait_timer += dt;
+        k->handle.renderable.sprites[0].frame_count = 1;
         if (k->wait_timer >= k->new_wait_time) {
+            k->handle.renderable.sprites[0].frame_count = 8;
             k->wait_timer = 0;
             k->new_wait_time = (random() % 3) + (random() / U32_MAX);
             k->next_target.x = random() % cast(u32) RENDER_WIDTH;
             k->next_target.y = random() % cast(u32) RENDER_HEIGHT;
+            Vector2 diff = Vector2Subtract(k->next_target, k->handle.transform.position);
+            k->handle.renderable.sprites[0].flip = diff.x < 0;
         }
     }
 
     Vector2 diff = Vector2Subtract(k->next_target, k->handle.transform.position);
-    k->handle.renderable.sprites[0].flip = diff.x < 0;
     Vector2 direction = Vector2Normalize(diff);
 
     k->handle.transform.position.x += direction.x * KNIGHT_SPEED * dt;
@@ -194,6 +205,12 @@ int main(void) {
         ClearBackground(GetColor(0x251818FF));
 
         //TODO: we gonna need layers
+        /*
+         entitiesclone = copy(entities)
+         sort() {
+            cast(Entity) a.transform.position.x - cast(Entity) b.transform.position.x
+         }
+        */
         for (usize i = 0; i < id_counter; i++) {
             Entity *entity = entities[i];
             Entity_Renderable *renderable = &entity->renderable;
